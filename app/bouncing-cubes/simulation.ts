@@ -1,4 +1,6 @@
 import { Application, Container, Graphics } from "pixi.js";
+import { createScale, playPiano } from "../audio";
+import { MovingGraphics } from "../utils";
 
 const app = new Application();
 (async () => {
@@ -20,6 +22,13 @@ async function main(
 	width: number,
 	height: number
 ) {
+	const scales = [
+		createScale("F#5", "minor", 15),
+		createScale("E5", "major", 15),
+		createScale("D5", "major", 15),
+		createScale("A5", "major", 15),
+	];
+
 	const mainContainer = new Container();
 
 	const backgroundBoxContainer = new Container();
@@ -76,7 +85,7 @@ async function main(
 		trackOverlay.x = size * i + size / 2;
 		tracksOverlayContainer.addChild(trackOverlay);
 
-		const block = new Graphics()
+		const block = new MovingGraphics()
 			.rect(
 				-(size / 2) + strokeWidth + padding,
 				-(size / 2) + strokeWidth + padding,
@@ -95,7 +104,10 @@ async function main(
 	);
 
 	app.ticker.add(() => {
-		blocksContainer.children.forEach((block, index) => {
+		blocksContainer.children.forEach((cBlock, index) => {
+			const block = cBlock as MovingGraphics;
+
+			block.oldY = block.y;
 			block.y =
 				height -
 				size / 2 -
@@ -106,6 +118,14 @@ async function main(
 					)
 				) *
 					(height - size);
+			block.oldDeltaY = block.deltaY;
+			block.deltaY = block.y - block.oldY;
+			if (
+				Math.sign(block.deltaY) === -1 &&
+				Math.sign(block.oldDeltaY) === 1
+			) {
+				playPiano(scales[0][index], 0.5);
+			}
 		});
 		const line = lineContainer.children[0] as Graphics;
 		line.clear();
