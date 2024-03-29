@@ -28,6 +28,7 @@ async function main(
 		createScale("D5", "major", 15),
 		createScale("A5", "major", 15),
 	];
+	let chordProgression = 0;
 
 	const mainContainer = new Container();
 
@@ -124,7 +125,10 @@ async function main(
 				Math.sign(block.deltaY) === -1 &&
 				Math.sign(block.oldDeltaY) === 1
 			) {
-				playPiano(scales[0][index], 0.5);
+				playPiano(scales[Math.floor(chordProgression)][index], 0.5);
+				if (index === 0) {
+					chordProgression += 0.25; // chord changes when the tonic has played 4 times
+				}
 			}
 		});
 		const line = lineContainer.children[0] as Graphics;
