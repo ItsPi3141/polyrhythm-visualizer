@@ -1,4 +1,11 @@
-import { Sampler, loaded } from "tone";
+import {
+	FMSynth,
+	FeedbackDelay,
+	PolySynth,
+	Reverb,
+	Sampler,
+	loaded,
+} from "tone";
 
 const pianoUrls: Record<string, string> = {
 	A0: "A0.mp3",
@@ -15,26 +22,98 @@ const pianoUrls: Record<string, string> = {
 	);
 });
 
-const piano: Sampler = new Sampler({
-	urls: pianoUrls,
-	release: 1,
-	baseUrl: "/audio/salamander/",
+// const piano: Sampler = new Sampler({
+// 	urls: pianoUrls,
+// 	release: 1,
+// 	baseUrl: "/audio/salamander/",
+// }).toDestination();
+const synth: PolySynth = new PolySynth(FMSynth, {
+	harmonicity: 99,
+	modulationIndex: 1,
+	oscillator: {
+		type: "fattriangle",
+	},
+	envelope: {
+		attack: 0.0001,
+		decay: 0.2,
+		sustain: 0.1,
+		release: 1,
+	},
+	modulation: {
+		type: "square",
+	},
+	modulationEnvelope: {
+		attack: 0.0001,
+		decay: 0.2,
+		sustain: 0,
+		release: 0.2,
+	},
 }).toDestination();
-
+synth.maxPolyphony = 15;
+// const reverbPiano: Sampler = new Sampler({
+// 	urls: pianoUrls,
+// 	release: 1,
+// 	baseUrl: "/audio/salamander/",
+// }).toDestination();
+const backgroundSynth: PolySynth = new PolySynth(FMSynth, {
+	harmonicity: 8,
+	modulationIndex: 1,
+	oscillator: {
+		type: "triangle",
+	},
+	envelope: {
+		attack: 0.001,
+		decay: 0.2,
+		sustain: 0.1,
+		release: 10,
+	},
+	modulation: {
+		type: "square",
+	},
+	modulationEnvelope: {
+		attack: 0.002,
+		decay: 0.2,
+		sustain: 0,
+		release: 0.2,
+	},
+}).toDestination();
+synth.connect(new Reverb(15).toDestination());
+backgroundSynth.connect(new Reverb(69).toDestination());
 var tonesLoaded: boolean = false;
 loaded().then(() => (tonesLoaded = true));
 
-export function playPiano(
+// export function playPiano(
+// 	notes: string | string[] | number | number[],
+// 	duration: string | number,
+// 	reverb: boolean = false
+// ) {
+// 	if (!tonesLoaded) return;
+// 	try {
+// 		reverb
+// 			? reverbPiano.triggerAttackRelease(notes, duration)
+// 			: piano.triggerAttackRelease(notes, duration);
+// 	} catch {}
+// }
+export function playSynth(
 	notes: string | string[] | number | number[],
-	duration: string | number
+	duration: string | number,
+	reverb: boolean = false
 ) {
 	if (!tonesLoaded) return;
-	piano.triggerAttackRelease(notes, duration);
+	try {
+		reverb
+			? backgroundSynth.triggerAttackRelease(notes, duration)
+			: synth.triggerAttackRelease(notes, duration);
+	} catch {}
 }
 
 export const scales = {
 	minor: [1, 3, 4, 6, 8, 9, 11],
 	major: [1, 3, 5, 6, 8, 10, 12],
+};
+export const tonicTriads = {
+	minor: [1, 3, 8],
+	major: [1, 4, 8],
 };
 export const notes = Array.from(
 	Array(8),
@@ -67,7 +146,9 @@ export function createScale(
 		);
 	}
 	const tonicIndex = notes.indexOf(tonic) - 1; // tonic is degree 1 on the scale, so we have to offset it by -1
-	const scale = nDegrees.map((n) => notes[n + tonicIndex]);
-	console.log(scale);
-	return scale;
+	return nDegrees.map((n) => notes[n + tonicIndex]);
+}
+export function createTonicTriad(root: string, key: "major" | "minor") {
+	const degrees = key === "major" ? tonicTriads.major : tonicTriads.minor;
+	return degrees.map((e) => notes[e + notes.indexOf(root) - 1]); // root is degree 1 on the scale, so we have to offset it by -1
 }

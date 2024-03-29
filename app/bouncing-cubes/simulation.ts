@@ -1,5 +1,5 @@
 import { Application, Container, Graphics } from "pixi.js";
-import { createScale, playPiano } from "../audio";
+import { createScale, createTonicTriad, playSynth } from "../audio";
 import { MovingGraphics } from "../utils";
 
 const app = new Application();
@@ -23,10 +23,16 @@ async function main(
 	height: number
 ) {
 	const scales = [
-		createScale("F#5", "minor", 15),
-		createScale("E5", "major", 15),
-		createScale("D5", "major", 15),
-		createScale("A5", "major", 15),
+		createScale("F#4", "minor", 15),
+		createScale("E4", "minor", 15),
+		createScale("D4", "minor", 15),
+		createScale("A4", "minor", 15),
+	];
+	const triads = [
+		createTonicTriad("F#3", "minor"),
+		createTonicTriad("E3", "minor"),
+		createTonicTriad("D3", "minor"),
+		createTonicTriad("A3", "minor"),
 	];
 	let chordProgression = 0;
 
@@ -125,9 +131,15 @@ async function main(
 				Math.sign(block.deltaY) === -1 &&
 				Math.sign(block.oldDeltaY) === 1
 			) {
-				playPiano(scales[Math.floor(chordProgression)][index], 0.5);
+				playSynth(scales[Math.floor(chordProgression)][index], 0.5);
 				if (index === 0) {
-					chordProgression += 0.25; // chord changes when the tonic has played 4 times
+					chordProgression = (chordProgression + 0.25) % 4; // chord changes when the tonic has played 4 times
+					if (chordProgression % 1 === 0)
+						playSynth(
+							triads[Math.floor(chordProgression)],
+							10,
+							true
+						);
 				}
 			}
 		});
