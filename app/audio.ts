@@ -28,6 +28,7 @@ export function playPiano(
 	notes: string | string[] | number | number[],
 	duration: string | number
 ) {
+	if (!tonesLoaded) return;
 	piano.triggerAttackRelease(notes, duration);
 }
 
