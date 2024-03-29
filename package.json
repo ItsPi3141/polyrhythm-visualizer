@@ -12,7 +12,8 @@
     "next": "14.1.4",
     "pixi.js": "^8.0.4",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "tone": "^14.7.77"
   },
   "devDependencies": {
     "@types/node": "20.11.30",
