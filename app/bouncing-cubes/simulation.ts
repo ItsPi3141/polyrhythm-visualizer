@@ -6,7 +6,7 @@ const app = new Application();
 		background: "#15171b",
 		resizeTo: document.querySelector(".canvas-container") as HTMLElement,
 	});
-	document.querySelector(".canvas-container").appendChild(app.canvas);
+	document.querySelector(".canvas-container")?.appendChild(app.canvas);
 
 	const mainContainer = await main(15, 1, 1200, 800);
 	app.stage.addChild(mainContainer);
