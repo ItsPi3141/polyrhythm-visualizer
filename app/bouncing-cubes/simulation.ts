@@ -1,12 +1,18 @@
 import { Application, Container, Graphics } from "pixi.js";
 import { createScale, createTonicTriad, playSynth } from "../audio";
-import { MovingGraphics } from "../utils";
+import { CustomGraphics, hslToRgb } from "../utils";
+import { ColorGradientFilter, GlowFilter } from "pixi-filters";
+
+const backgroundColor = "#15171b";
 
 const app = new Application();
 (async () => {
 	await app.init({
-		background: "#15171b",
+		background: backgroundColor,
 		resizeTo: document.querySelector(".canvas-container") as HTMLElement,
+		antialias: true,
+		// WebGL
+		useBackBuffer: true,
 	});
 	document.querySelector(".canvas-container")?.appendChild(app.canvas);
 
@@ -16,6 +22,7 @@ const app = new Application();
 	mainContainer.y = 15;
 })();
 
+let hue = 0;
 async function main(
 	numberOfNotes: number = 15,
 	speedFactor: number = 1,
@@ -55,44 +62,68 @@ async function main(
 	mainContainer.addChild(blocksContainer);
 
 	const size = width / numberOfNotes;
-	const strokeWidth = 1;
+	const strokeWidth = 4;
 	const padding = 8;
 
-	backgroundBoxContainer.addChild(
-		new Graphics()
-			.rect(0, 0, width, height)
-			.stroke({ color: "#fff4", width: 3 })
-	);
+	const largeFrame = new CustomGraphics()
+		.rect(0, 0, width, height)
+		.stroke({ color: "#fff4", width: 4 });
+	let largeFrameGlowStrength = 0;
+	largeFrame.filtersObject["glow"] = new GlowFilter({
+		distance: 25,
+		quality: 0.5,
+		outerStrength: largeFrameGlowStrength,
+		innerStrength: largeFrameGlowStrength,
+		color: `hsl(${hue}, 100%, 90%)`,
+	});
+	largeFrame.filters = [largeFrame.filtersObject["glow"]];
+
+	backgroundBoxContainer.addChild(largeFrame);
 
 	for (let i = 0; i < numberOfNotes; i++) {
-		const track = new Graphics()
+		const track = new CustomGraphics()
 			.rect(
 				-(size / 2) + strokeWidth + padding,
-				strokeWidth + padding,
+				-2.5,
 				size - (strokeWidth + padding) * 2,
-				height - (strokeWidth + padding) * 2
-			)
-			.fill("#0000")
-			.stroke("#fff3");
-		track.width = size - (strokeWidth + padding) * 2;
-		track.height = height - (strokeWidth + padding) * 2;
-		track.x = size * i + size / 2;
-		tracksContainer.addChild(track);
-
-		const trackOverlay = new Graphics()
-			.rect(
-				-(size / 2) + strokeWidth + padding,
-				strokeWidth + padding,
-				size - (strokeWidth + padding) * 2,
-				height - (strokeWidth + padding) * 2
+				5
 			)
 			.fill("#fff");
+		track.width = size - (strokeWidth + padding) * 2;
+		track.height = 5;
+		track.x = size * i + size / 2;
+		track.y = height - (strokeWidth + padding + 2.5);
+		track.alpha = 0.2;
+		tracksContainer.addChild(track);
+
+		const trackOverlay = new CustomGraphics()
+			.rect(
+				-(size / 2) + strokeWidth + padding,
+				strokeWidth + padding,
+				size - (strokeWidth + padding) * 2,
+				height - (strokeWidth + padding) * 2
+			)
+			.fill(backgroundColor);
+
 		trackOverlay.width = size - (strokeWidth + padding) * 2;
 		trackOverlay.height = height - (strokeWidth + padding) * 2;
 		trackOverlay.x = size * i + size / 2;
+		trackOverlay.alpha = 0;
+		trackOverlay.filtersObject["colorGradient"] = new ColorGradientFilter({
+			css: `linear-gradient(0deg, ${
+				"#" +
+				hslToRgb(hue / 360, 1, 0.9)
+					.map((e) => Math.floor(e).toString(16).padStart(2, "0"))
+					.join("")
+			} 0%, #fff0 100%);`,
+			replace: true,
+			alpha: 1,
+			angle: 0,
+		});
+		trackOverlay.filters = [trackOverlay.filtersObject["colorGradient"]];
 		tracksOverlayContainer.addChild(trackOverlay);
 
-		const block = new MovingGraphics()
+		const block = new CustomGraphics()
 			.rect(
 				-(size / 2) + strokeWidth + padding,
 				-(size / 2) + strokeWidth + padding,
@@ -100,10 +131,19 @@ async function main(
 				size - (strokeWidth + padding) * 2
 			)
 			.fill("#0000")
-			.stroke("#fff");
+			.stroke({ color: "#fff", width: strokeWidth });
 		block.width = size - (strokeWidth + padding) * 2;
 		block.height = size - (strokeWidth + padding) * 2;
 		block.x = size * i + size / 2;
+		block.alpha = 0.5;
+		block.filtersObject["glow"] = new GlowFilter({
+			distance: 25,
+			quality: 0.5,
+			outerStrength: block.filterValues.glow.strength / 2,
+			innerStrength: block.filterValues.glow.strength,
+			color: `hsl(${hue}, 100%, 90%)`,
+		});
+		block.filters = [block.filtersObject["glow"]];
 		blocksContainer.addChild(block);
 	}
 	lineContainer.addChild(
@@ -112,9 +152,10 @@ async function main(
 
 	var firstTickTime: number = 0;
 	app.ticker.add(() => {
+		hue = (hue + 0.2) % 360;
 		if (firstTickTime === 0) firstTickTime = app.ticker.lastTime;
 		blocksContainer.children.forEach((cBlock, index) => {
-			const block = cBlock as MovingGraphics;
+			const block = cBlock as CustomGraphics;
 
 			block.oldY = block.y;
 			block.y =
@@ -129,15 +170,22 @@ async function main(
 					(height - size);
 			block.oldDeltaY = block.deltaY;
 			block.deltaY = block.y - block.oldY;
+			const trackOverlay = tracksOverlayContainer.children[
+				index
+			] as CustomGraphics;
+			const track = tracksContainer.children[index] as CustomGraphics;
 			if (
 				Math.sign(block.deltaY) === -1 &&
 				Math.sign(block.oldDeltaY) === 1 &&
 				app.ticker.lastTime - firstTickTime > 100
 			) {
-				if (index === 0)
+				block.filterValues.glow.strength = 20;
+				trackOverlay.alpha = 1;
+				track.alpha = 1;
+				if (index === 0) {
 					chordProgression = (chordProgression + 0.25) % 4; // chord changes when the tonic has played 4 times
-				if (chordProgression % 1 === 0 && index === 0)
-					// if (index === 0)
+				}
+				if (chordProgression % 1 === 0 && index === 0) {
 					playSynth(
 						[
 							triads[Math.floor(chordProgression)],
@@ -146,13 +194,42 @@ async function main(
 						1,
 						true
 					);
-				else
+					largeFrameGlowStrength = 25;
+				} else {
 					playSynth(
 						scales[Math.floor(chordProgression)][index],
 						0.5,
 						false
 					);
+				}
 			}
+
+			block.tint = `hsl(${hue}, 100%, 90%)`;
+			block.filterValues.glow.strength /= 1.03;
+			block.filtersObject["glow"].outerStrength =
+				block.filterValues.glow.strength / 2;
+			block.filtersObject["glow"].innerStrength =
+				block.filterValues.glow.strength;
+			block.filtersObject["glow"].color = `hsl(${hue}, 100%, 90%)`;
+
+			largeFrameGlowStrength /= 1.001;
+			largeFrame.filtersObject["glow"].outerStrength =
+				largeFrameGlowStrength;
+			largeFrame.filtersObject["glow"].innerStrength =
+				largeFrameGlowStrength;
+			largeFrame.filtersObject["glow"].color = `hsl(${hue}, 100%, 90%)`;
+
+			trackOverlay.alpha /= 1.03;
+			trackOverlay.filtersObject[
+				"colorGradient"
+			].css = `linear-gradient(0deg, ${
+				"#" +
+				hslToRgb(hue / 360, 1, 0.9)
+					.map((e) => Math.floor(e).toString(16).padStart(2, "0"))
+					.join("")
+			} 0%, #fff0 100%)`;
+
+			if (track.alpha > 0.2) track.alpha /= 1.03;
 		});
 		const line = lineContainer.children[0] as Graphics;
 		line.clear();
