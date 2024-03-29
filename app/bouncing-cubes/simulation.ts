@@ -23,16 +23,16 @@ async function main(
 	height: number
 ) {
 	const scales = [
-		createScale("F#4", "minor", 15),
-		createScale("E4", "minor", 15),
-		createScale("D4", "minor", 15),
-		createScale("A4", "minor", 15),
+		createScale("F#2", "minor", 15),
+		createScale("E2", "minor", 15),
+		createScale("D2", "major", 15),
+		createScale("C2", "minor", 15),
 	];
 	const triads = [
 		createTonicTriad("F#3", "minor"),
 		createTonicTriad("E3", "minor"),
-		createTonicTriad("D3", "minor"),
-		createTonicTriad("A3", "minor"),
+		createTonicTriad("D3", "major"),
+		createTonicTriad("C3", "minor"),
 	];
 	let chordProgression = 0;
 
@@ -110,7 +110,9 @@ async function main(
 		new Graphics().moveTo(0, 0).lineTo(0, 0).stroke("#fff")
 	);
 
+	var firstTickTime: number = 0;
 	app.ticker.add(() => {
+		if (firstTickTime === 0) firstTickTime = app.ticker.lastTime;
 		blocksContainer.children.forEach((cBlock, index) => {
 			const block = cBlock as MovingGraphics;
 
@@ -129,18 +131,27 @@ async function main(
 			block.deltaY = block.y - block.oldY;
 			if (
 				Math.sign(block.deltaY) === -1 &&
-				Math.sign(block.oldDeltaY) === 1
+				Math.sign(block.oldDeltaY) === 1 &&
+				app.ticker.lastTime - firstTickTime > 100
 			) {
-				playSynth(scales[Math.floor(chordProgression)][index], 0.5);
-				if (index === 0) {
+				if (index === 0)
 					chordProgression = (chordProgression + 0.25) % 4; // chord changes when the tonic has played 4 times
-					if (chordProgression % 1 === 0)
-						playSynth(
+				if (chordProgression % 1 === 0 && index === 0)
+					// if (index === 0)
+					playSynth(
+						[
 							triads[Math.floor(chordProgression)],
-							10,
-							true
-						);
-				}
+							scales[Math.floor(chordProgression)][index],
+						].flat(),
+						1,
+						true
+					);
+				else
+					playSynth(
+						scales[Math.floor(chordProgression)][index],
+						0.5,
+						false
+					);
 			}
 		});
 		const line = lineContainer.children[0] as Graphics;

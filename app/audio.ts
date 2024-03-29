@@ -1,9 +1,13 @@
 import {
+	AutoWah,
+	Chorus,
+	Destination,
 	FMSynth,
-	FeedbackDelay,
+	Freeverb,
+	JCReverb,
 	PolySynth,
 	Reverb,
-	Sampler,
+	StereoWidener,
 	loaded,
 } from "tone";
 
@@ -28,13 +32,13 @@ const pianoUrls: Record<string, string> = {
 // 	baseUrl: "/audio/salamander/",
 // }).toDestination();
 const synth: PolySynth = new PolySynth(FMSynth, {
-	harmonicity: 99,
+	harmonicity: 2,
 	modulationIndex: 1,
 	oscillator: {
 		type: "fattriangle",
 	},
 	envelope: {
-		attack: 0.0001,
+		attack: 0.001,
 		decay: 0.2,
 		sustain: 0.1,
 		release: 1,
@@ -43,10 +47,10 @@ const synth: PolySynth = new PolySynth(FMSynth, {
 		type: "square",
 	},
 	modulationEnvelope: {
-		attack: 0.0001,
+		attack: 0.001,
 		decay: 0.2,
 		sustain: 0,
-		release: 0.2,
+		release: 5,
 	},
 }).toDestination();
 synth.maxPolyphony = 15;
@@ -60,25 +64,61 @@ const backgroundSynth: PolySynth = new PolySynth(FMSynth, {
 	modulationIndex: 1,
 	oscillator: {
 		type: "triangle",
+		volume: -15,
 	},
 	envelope: {
 		attack: 0.001,
-		decay: 0.2,
-		sustain: 0.1,
-		release: 10,
+		decay: 2000,
+		sustain: 0.8,
+		release: 20,
+		attackCurve: "step",
+		decayCurve: "linear",
 	},
 	modulation: {
 		type: "square",
 	},
 	modulationEnvelope: {
 		attack: 0.002,
-		decay: 0.2,
-		sustain: 0,
-		release: 0.2,
+		decay: 2000,
+		sustain: 0.9,
+		release: 1,
+		attackCurve: "step",
 	},
 }).toDestination();
-synth.connect(new Reverb(15).toDestination());
-backgroundSynth.connect(new Reverb(69).toDestination());
+
+const fillSynth: PolySynth = new PolySynth(FMSynth, {
+	harmonicity: 8,
+	modulationIndex: 1,
+	oscillator: {
+		type: "triangle",
+		volume: -25,
+	},
+	envelope: {
+		attack: 0.001,
+		decay: 2000,
+		sustain: 0.8,
+		release: 20,
+		attackCurve: "step",
+		decayCurve: "linear",
+	},
+	modulation: {
+		type: "square",
+	},
+	modulationEnvelope: {
+		attack: 0.002,
+		decay: 2000,
+		sustain: 0.9,
+		release: 1,
+		attackCurve: "step",
+	},
+}).toDestination();
+
+const lowReverb = new Reverb(0.4);
+const highReverb = new Reverb(15);
+
+synth.chain(lowReverb, Destination);
+backgroundSynth.chain(highReverb, Destination);
+// reverbPiano.connect(new Reverb(69).toDestination());
 var tonesLoaded: boolean = false;
 loaded().then(() => (tonesLoaded = true));
 
@@ -102,18 +142,24 @@ export function playSynth(
 	if (!tonesLoaded) return;
 	try {
 		reverb
-			? backgroundSynth.triggerAttackRelease(notes, duration)
+			? (backgroundSynth.triggerAttackRelease(notes, duration),
+			  fillSynth.triggerAttackRelease(
+					notes,
+					typeof duration === "number" ? duration * 10 : 10
+			  ))
 			: synth.triggerAttackRelease(notes, duration);
 	} catch {}
 }
 
 export const scales = {
-	minor: [1, 3, 4, 6, 8, 9, 11],
-	major: [1, 3, 5, 6, 8, 10, 12],
+	// minor: [1, 3, 4, 6, 8, 9, 11],
+	// major: [1, 3, 5, 6, 8, 10, 12],
+	minor: [1, 4, 8],
+	major: [1, 5, 8],
 };
 export const tonicTriads = {
-	minor: [1, 3, 8],
-	major: [1, 4, 8],
+	minor: [1, 4, 8],
+	major: [1, 5, 8],
 };
 export const notes = Array.from(
 	Array(8),
