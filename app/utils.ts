@@ -1,4 +1,25 @@
+import { Metadata } from "next";
 import { Graphics } from "pixi.js";
+
+export function generateMetadata({
+	title,
+	description,
+	image,
+}: Record<string, string>): Metadata {
+	return {
+		title: title,
+		description: description,
+		icons: {
+			icon: "/favicon.ico",
+		},
+		openGraph: {
+			type: "website",
+			title: title,
+			description: description,
+			images: image ? [image].flat() : [],
+		},
+	};
+}
 
 export class CustomGraphics extends Graphics {
 	public oldX: number;

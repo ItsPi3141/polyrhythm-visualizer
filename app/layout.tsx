@@ -1,13 +1,14 @@
-import { Inter } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Metadata } from "next";
+import { generateMetadata } from "./utils";
 
-const inter = Inter({ subsets: ["latin"] });
+const poppins = Poppins({ subsets: ["latin"], weight: ["200", "400", "700"] });
 
-export const metadata: Metadata = {
+export const metadata: Metadata = generateMetadata({
 	title: "Polyrhythm Visualizer",
 	description: "Experiment with polyrhythms in a beautiful way",
-};
+});
 
 export default function RootLayout({
 	children,
@@ -16,7 +17,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={inter.className}>{children}</body>
+			<body className={poppins.className}>{children}</body>
 		</html>
 	);
 }
