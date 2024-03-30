@@ -5,7 +5,7 @@ import { ColorGradientFilter, GlowFilter } from "pixi-filters";
 
 const backgroundColor = "#15171b";
 
-let globals: object = {
+let globals: Record<string, any> = {
 	speedOffset: 1,
 };
 
@@ -174,6 +174,7 @@ async function main(numberOfNotes: number = 15, width: number, height: number) {
 
 	var firstTickTime: number = 0;
 	app.ticker.add(() => {
+		let queuedNotes: string[] = [];
 		hue = (hue + 0.2) % 360;
 		if (firstTickTime === 0) firstTickTime = app.ticker.lastTime;
 		blocksContainer.children.forEach((cBlock, index) => {
@@ -218,10 +219,13 @@ async function main(numberOfNotes: number = 15, width: number, height: number) {
 					);
 					largeFrameGlowStrength = 25;
 				} else {
-					playSynth(
-						scales[Math.floor(chordProgression)][index],
-						0.5,
-						false
+					// playSynth(
+					// 	scales[Math.floor(chordProgression)][index],
+					// 	0.5,
+					// 	false
+					// );
+					queuedNotes.push(
+						scales[Math.floor(chordProgression)][index]
 					);
 				}
 			}
@@ -271,6 +275,7 @@ async function main(numberOfNotes: number = 15, width: number, height: number) {
 			);
 		}
 		line.stroke("#fff4");
+		playSynth(queuedNotes, 0.5, false);
 	});
 
 	return mainContainer;

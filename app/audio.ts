@@ -1,5 +1,14 @@
 import { Destination, FMSynth, PolySynth, Reverb, loaded } from "tone";
 
+const tConsole = console as any;
+const customWarn = (...args: any[]) => {
+	if (args[0].includes("Max polyphony exceeded. Note dropped."))
+		isThrottling = true;
+	return tConsole.oldWarn(...args);
+};
+tConsole.oldWarn = tConsole.warn;
+tConsole.warn = customWarn;
+
 const pianoUrls: Record<string, string> = {
 	A0: "A0.mp3",
 	C8: "C8.mp3",
@@ -123,7 +132,10 @@ loaded().then(() => (tonesLoaded = true));
 // 			: piano.triggerAttackRelease(notes, duration);
 // 	} catch {}
 // }
+let isThrottling = false;
 let lastNoteHit = Date.now();
+let queuedNotes: string[] = [];
+let consecutiveSmallQueue = 0;
 export function playSynth(
 	notes: string | string[] | number | number[],
 	duration: string | number,
@@ -138,8 +150,29 @@ export function playSynth(
 					typeof duration === "number" ? duration * 10 : 10
 			  ))
 			: (() => {
-					if (lastNoteHit + 50 < Date.now()) {
-						lastNoteHit = Date.now();
+					if (isThrottling) {
+						if (lastNoteHit + 50 < Date.now()) {
+							lastNoteHit = Date.now();
+							synth.triggerAttackRelease(
+								queuedNotes.slice(0, 1),
+								0.25
+							);
+							if (queuedNotes.length <= 2)
+								consecutiveSmallQueue++;
+							else consecutiveSmallQueue = 0;
+							if (consecutiveSmallQueue >= 5) {
+								consecutiveSmallQueue = 0;
+								isThrottling = false;
+							}
+							queuedNotes = [];
+						} else {
+							typeof notes === "string"
+								? queuedNotes.push(notes)
+								: (queuedNotes = queuedNotes.concat(
+										notes as string[]
+								  ));
+						}
+					} else {
 						synth.triggerAttackRelease(notes, duration);
 					}
 			  })();
