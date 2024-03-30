@@ -1,15 +1,4 @@
-import {
-	AutoWah,
-	Chorus,
-	Destination,
-	FMSynth,
-	Freeverb,
-	JCReverb,
-	PolySynth,
-	Reverb,
-	StereoWidener,
-	loaded,
-} from "tone";
+import { Destination, FMSynth, PolySynth, Reverb, loaded } from "tone";
 
 const pianoUrls: Record<string, string> = {
 	A0: "A0.mp3",
@@ -31,7 +20,7 @@ const pianoUrls: Record<string, string> = {
 // 	release: 1,
 // 	baseUrl: "/audio/salamander/",
 // }).toDestination();
-const synth: PolySynth = new PolySynth(FMSynth, {
+let synth: PolySynth = new PolySynth(FMSynth, {
 	harmonicity: 2,
 	modulationIndex: 1,
 	oscillator: {
@@ -53,7 +42,7 @@ const synth: PolySynth = new PolySynth(FMSynth, {
 		release: 5,
 	},
 }).toDestination();
-synth.maxPolyphony = 15;
+synth.maxPolyphony = 32;
 // const reverbPiano: Sampler = new Sampler({
 // 	urls: pianoUrls,
 // 	release: 1,
@@ -134,6 +123,7 @@ loaded().then(() => (tonesLoaded = true));
 // 			: piano.triggerAttackRelease(notes, duration);
 // 	} catch {}
 // }
+let lastNoteHit = Date.now();
 export function playSynth(
 	notes: string | string[] | number | number[],
 	duration: string | number,
@@ -147,7 +137,12 @@ export function playSynth(
 					notes,
 					typeof duration === "number" ? duration * 10 : 10
 			  ))
-			: synth.triggerAttackRelease(notes, duration);
+			: (() => {
+					if (lastNoteHit + 50 < Date.now()) {
+						lastNoteHit = Date.now();
+						synth.triggerAttackRelease(notes, duration);
+					}
+			  })();
 	} catch {}
 }
 

@@ -5,6 +5,14 @@ import { ColorGradientFilter, GlowFilter } from "pixi-filters";
 
 const backgroundColor = "#15171b";
 
+let globals: object = {
+	speedOffset: 1,
+};
+
+export function setGlobals(value: object) {
+	globals = { ...globals, ...value };
+}
+
 const app = new Application();
 (async () => {
 	await app.init({
@@ -16,19 +24,27 @@ const app = new Application();
 	});
 	document.querySelector(".canvas-container")?.appendChild(app.canvas);
 
-	const mainContainer = await main(15, 1, 1200, 800);
-	app.stage.addChild(mainContainer);
-	mainContainer.x = 15;
-	mainContainer.y = 15;
+	const positionWrapper = new Container();
+	const mainContainer = await main(15, 1200, 800);
+	positionWrapper.addChild(mainContainer);
+	app.stage.addChild(positionWrapper);
+	app.ticker.add(() => {
+		let scaleFactor = 1;
+		if (app.canvas.width < 1200 || app.canvas.height < 800)
+			scaleFactor = Math.min(
+				app.canvas.width / (1200 + 50),
+				app.canvas.height / (800 + 50)
+			);
+		positionWrapper.scale.set(scaleFactor);
+		positionWrapper.position.set(
+			app.canvas.width / 2,
+			app.canvas.height / 2
+		);
+	});
 })();
 
 let hue = 0;
-async function main(
-	numberOfNotes: number = 15,
-	speedFactor: number = 1,
-	width: number,
-	height: number
-) {
+async function main(numberOfNotes: number = 15, width: number, height: number) {
 	const scales = [
 		createScale("F#2", "minor", 15),
 		createScale("E2", "minor", 15),
@@ -44,6 +60,8 @@ async function main(
 	let chordProgression = 0;
 
 	const mainContainer = new Container();
+	mainContainer.x = -width / 2;
+	mainContainer.y = -height / 2;
 
 	const backgroundBoxContainer = new Container();
 	mainContainer.addChild(backgroundBoxContainer);
@@ -110,12 +128,16 @@ async function main(
 		trackOverlay.x = size * i + size / 2;
 		trackOverlay.alpha = 0;
 		trackOverlay.filtersObject["colorGradient"] = new ColorGradientFilter({
-			css: `linear-gradient(0deg, ${
-				"#" +
-				hslToRgb(hue / 360, 1, 0.9)
-					.map((e) => Math.floor(e).toString(16).padStart(2, "0"))
-					.join("")
-			} 0%, #fff0 100%);`,
+			type: ColorGradientFilter.LINEAR,
+			stops: [0, 1].map((e) => {
+				return {
+					color: `#${hslToRgb(hue / 360, 1, 0.9)
+						.map((e) => Math.floor(e).toString(16).padStart(2, "0"))
+						.join("")}`,
+					offset: e,
+					alpha: 1 - e,
+				};
+			}),
 			replace: true,
 			alpha: 1,
 			angle: 0,
@@ -164,7 +186,7 @@ async function main(
 				Math.abs(
 					Math.sin(
 						(app.ticker.lastTime / 10000) *
-							(10 + index * speedFactor * 0.1)
+							(10 + index * globals.speedOffset * 0.1)
 					)
 				) *
 					(height - size);
@@ -220,14 +242,19 @@ async function main(
 			largeFrame.filtersObject["glow"].color = `hsl(${hue}, 100%, 90%)`;
 
 			trackOverlay.alpha /= 1.03;
-			trackOverlay.filtersObject[
-				"colorGradient"
-			].css = `linear-gradient(0deg, ${
-				"#" +
-				hslToRgb(hue / 360, 1, 0.9)
-					.map((e) => Math.floor(e).toString(16).padStart(2, "0"))
-					.join("")
-			} 0%, #fff0 100%)`;
+			trackOverlay.filtersObject["colorGradient"].stops = [0, 1].map(
+				(e) => {
+					return {
+						color: `#${hslToRgb(hue / 360, 1, 0.9)
+							.map((e) =>
+								Math.floor(e).toString(16).padStart(2, "0")
+							)
+							.join("")}`,
+						offset: e,
+						alpha: 1 - e,
+					};
+				}
+			);
 
 			if (track.alpha > 0.2) track.alpha /= 1.03;
 		});

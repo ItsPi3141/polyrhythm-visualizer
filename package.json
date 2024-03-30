@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@fluentui/react-icons": "^2.0.233",
     "next": "14.1.4",
     "pixi-filters": "^6.0.0",
     "pixi.js": "^8.0.4",
