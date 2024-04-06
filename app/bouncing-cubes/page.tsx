@@ -1,9 +1,12 @@
 "use client";
 import { Play20Regular } from "@fluentui/react-icons";
-import React, { FormEvent } from "react";
+import React, { type FormEvent } from "react";
+
+// biome-ignore lint/suspicious/noExplicitAny:
+type state = Record<string, any>;
 
 export default class FallingCubes extends React.Component {
-	constructor(props: any) {
+	constructor(props: object) {
 		super(props);
 		this.state = {
 			initialized: false,
@@ -26,13 +29,13 @@ export default class FallingCubes extends React.Component {
 							min: -10,
 							max: 10,
 							oninput: (event: FormEvent<HTMLInputElement>) => {
-								if (!(this.state as any).initialized)
+								if (!(this.state as state).initialized)
 									return this.setState({
 										speedOffset: (
 											event?.target as HTMLInputElement
 										).value,
 									});
-								if (!(this.state as any).ready) {
+								if (!(this.state as state).ready) {
 									this.setState({ ready: true });
 									const sg =
 										require("./simulation.ts").setGlobals;
@@ -45,7 +48,7 @@ export default class FallingCubes extends React.Component {
 										).value,
 									});
 								} else {
-									(this.state as any).setGlobals({
+									(this.state as state).setGlobals({
 										speedOffset: (
 											event?.target as HTMLInputElement
 										).value,
@@ -54,14 +57,14 @@ export default class FallingCubes extends React.Component {
 							},
 						},
 					].map((e, i) => (
-						<div className="flex flex-col gap-1" key={i}>
+						<div className="flex flex-col gap-1" key={e.title}>
 							<p>{e.title}</p>
 							<input
 								className="bg-[#fff1] py-1 pl-2 rounded-lg outline-none"
 								type={e.type}
 								defaultValue={e.default}
-								min={e.min || -Infinity}
-								max={e.max || Infinity}
+								min={e.min || Number.NEGATIVE_INFINITY}
+								max={e.max || Number.POSITIVE_INFINITY}
 								onInput={e.oninput || (() => {})}
 							/>
 						</div>
@@ -76,10 +79,11 @@ export default class FallingCubes extends React.Component {
 						onClick={(e) => {
 							const s = require("./simulation.ts");
 							s.setGlobals({
-								speedOffset: (this.state as any).speedOffset,
+								speedOffset: (this.state as state).speedOffset,
 							});
 							this.setState({ initialized: true });
 							const element = e.target as HTMLButtonElement;
+							element.style.display = "none";
 							element.remove();
 						}}
 					>
